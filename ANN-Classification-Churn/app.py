@@ -4,21 +4,66 @@ import pandas as pd
 import tensorflow as tf
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder, StandardScaler
 import pickle
+import os
 
+# Cache the model loading to improve performance
+@st.cache_resource
+def load_model():
+    try:
+        # Try different possible paths
+        model_paths = [
+            'churn_model.h5',
+            './churn_model.h5',
+            os.path.join(os.path.dirname(__file__), 'churn_model.h5')
+        ]
+        
+        for path in model_paths:
+            if os.path.exists(path):
+                return tf.keras.models.load_model(path)
+        
+        # If none found, raise error
+        raise FileNotFoundError("churn_model.h5 not found in any expected location")
+    except Exception as e:
+        st.error(f"Error loading model: {str(e)}")
+        st.stop()
 
-# Load the trained model
-model = tf.keras.models.load_model('churn_model.h5')
+@st.cache_resource
+def load_preprocessors():
+    try:
+        # Try different possible paths for pickle files
+        base_paths = ['.', os.path.dirname(__file__)]
+        
+        onehot_encoder = None
+        label_encoder_gender = None
+        scaler = None
+        
+        for base_path in base_paths:
+            try:
+                with open(os.path.join(base_path, 'onehot_encoder_geo.pkl'), 'rb') as f:
+                    onehot_encoder = pickle.load(f)
+                
+                with open(os.path.join(base_path, 'label_encoder_gender.pkl'), 'rb') as f:
+                    label_encoder_gender = pickle.load(f)
+                
+                with open(os.path.join(base_path, 'scaler.pkl'), 'rb') as f:
+                    scaler = pickle.load(f)
+                
+                break  # If successful, break out of loop
+            except FileNotFoundError:
+                continue
+        
+        if onehot_encoder is None or label_encoder_gender is None or scaler is None:
+            raise FileNotFoundError("One or more preprocessor files not found")
+        
+        return onehot_encoder, label_encoder_gender, scaler
+    
+    except Exception as e:
+        st.error(f"Error loading preprocessors: {str(e)}")
+        st.stop()
 
-# Load the preprocessors
-with open('onehot_encoder_geo.pkl', 'rb') as f:
-    onehot_encoder = pickle.load(f)
-
-with open('label_encoder_gender.pkl', 'rb') as f:
-    label_encoder_gender = pickle.load(f)
-
-with open('scaler.pkl', 'rb') as f:
-    scaler = pickle.load(f)
-
+# Load model and preprocessors
+model = load_model()
+onehot_encoder, label_encoder_gender, scaler = load_preprocessors()
 
 ## streamlit app
 st.title("Customer Churn Prediction")
