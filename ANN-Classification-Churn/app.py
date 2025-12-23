@@ -7,7 +7,7 @@ import pickle
 
 
 # Load the trained model
-model = tf.keras.models.load_model('churn_model.h5')
+model = tf.keras.models.load_model('../ANN-Classification-Churn/churn_model.h5')
 
 # Load the preprocessors
 with open('onehot_encoder_geo.pkl', 'rb') as f:
